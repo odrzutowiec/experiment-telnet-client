@@ -18,7 +18,7 @@ const IAC = 255
 class Output extends stream.Transform {
   constructor() {
     super()
-    this.setEncoding('latin1')
+    this.setEncoding('utf8')
     this.state = undefined
     this.command = undefined
   }
@@ -96,4 +96,6 @@ socket.out.on('data', data => {
 socket.out.on('command', command => {
   console.log('command', command)
 })
-
+process.stdin.on('data', buffer => {
+  socket.write(buffer.toString('utf8'))
+})
