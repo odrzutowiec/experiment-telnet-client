@@ -1,3 +1,4 @@
+const events = require('events')
 const net = require('net')
 const stream = require('stream')
 const buffer = require('buffer').Buffer
@@ -15,7 +16,7 @@ const DO = 253
 const DONT = 254
 const IAC = 255
 
-class Output extends stream.Transform {
+class TelnetStream extends stream.Transform {
   constructor() {
     super()
     this.setEncoding('utf8')
@@ -25,7 +26,7 @@ class Output extends stream.Transform {
   _transform(chunk, encoding, callback) {
     const newchunk = buffer.alloc(chunk.length)
     let index = 0
-    for (let byte of chunk) {
+    for (const byte of chunk) {
       const newbyte = this.handle(byte)
       if (newbyte !== undefined) {
         newchunk[index++] = newbyte
@@ -42,60 +43,76 @@ class Output extends stream.Transform {
           case WONT:
           case DO:
           case DONT:
-            this.state = OPTION
             this.command = byte
+            this.state = OPTION
             return undefined
-
           default:
             this.emit('command', { command: byte })
+            this.command = undefined
+            this.state = undefined
             return undefined
         }
-
       case OPTION:
         this.emit('command', { command: this.command, option: byte })
-        this.state = undefined
         this.command = undefined
+        this.state = undefined
         return undefined
-
       case SUBNEG:
         this.state = undefined
         return byte
-
       case SBNGCMD:
         this.state = undefined
         return byte
-
       case undefined:
       default:
         switch (byte) {
           case IAC:
             this.state = COMMAND
             return undefined
-
           default:
             return byte
         }
-
     }
   }
 }
 
-class Socket extends net.Socket {
-  constructor() {
+class Telnet extends events {
+  constructor(port, host) {
     super()
-    this.out = new Output()
-    this.pipe(this.out)
+    this.socket = new net.Socket()
+    this.out = new TelnetStream()
+    this.out.addListener('data', event => this.emit('data', event))
+    this.out.addListener('command', event => this.emit('command', event))
+    this.socket.pipe(this.out)
+    this.socket.connect(port, host)
+  }
+  destroy() {
+    this.socket.destroy()
+  }
+  read() {
+    return new Promise(resolve => this.once('data', data => resolve(data)))
+  }
+  async print() {
+    process.stdout.write(await this.read())
+  }
+  write(data) {
+    data = data instanceof Array
+      ? buffer.from(data)
+      : data
+    return new Promise(resolve => this.socket.write(data, resolve))
   }
 }
 
-const socket = new Socket()
-socket.connect(23, 'aardwolf.org')
-socket.out.on('data', data => {
-  process.stdout.write(data)
-})
-socket.out.on('command', command => {
-  console.log('command', command)
-})
-process.stdin.on('data', buffer => {
-  socket.write(buffer.toString('utf8'))
-})
+(async () => {
+  const aard = new Telnet(23, 'aardwolf.org')
+  aard.on('command', command => console.log(command))
+  await aard.print()
+  await aard.print()
+  await aard.write([IAC, DO, 86])
+  await aard.print()
+  // await aard.write('viri\n')
+  // await aard.print()
+  // await aard.write('nmb344\n')
+  // await aard.print()
+  aard.destroy()
+})()
