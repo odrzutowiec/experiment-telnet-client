@@ -6,7 +6,7 @@ const buffer = require('buffer').Buffer
 const COMMAND = Symbol()
 const OPTION = Symbol()
 const SUBNEG = Symbol()
-const SBNGCMD = Symbol()
+const SUBCMD = Symbol()
 
 const SUBEND = 240
 const SUBBEG = 250
@@ -22,6 +22,8 @@ class TelnetStream extends stream.Transform {
     this.setEncoding('utf8')
     this.state = undefined
     this.command = undefined
+    this.option = undefined
+    this.subcmd = []
   }
   _transform(chunk, encoding, callback) {
     const newchunk = buffer.alloc(chunk.length)
@@ -46,25 +48,54 @@ class TelnetStream extends stream.Transform {
             this.command = byte
             this.state = OPTION
             return undefined
+          case SUBBEG:
+            this.command = SUBBEG
+            this.state = OPTION
+            return undefined
           default:
             this.emit('command', { command: byte })
-            this.command = undefined
             this.state = undefined
             return undefined
         }
       case OPTION:
+        if (this.command === SUBBEG) {
+          this.option = byte
+          this.state = SUBNEG
+          return undefined
+        }
         this.emit('command', { command: this.command, option: byte })
-        this.command = undefined
         this.state = undefined
         return undefined
       case SUBNEG:
-        this.state = undefined
-        return byte
-      case SBNGCMD:
-        this.state = undefined
-        return byte
+        switch (byte) {
+          case IAC:
+            this.state = SUBCMD
+            return undefined
+          default:
+            this.subcmd.push(byte)
+            return undefined
+            break;
+          }
+      case SUBCMD:
+        switch (byte) {
+          case IAC:
+            this.subcmd.push(IAC)
+            this.state = SUBNEG
+            return undefined
+          case SUBEND:
+            this.emit('command', { command: this.command, option: this.option, subcmd: this.subcmd })
+            this.state = undefined
+            return undefined
+          default:
+            console.error('error')
+            this.state = undefined
+            return undefined
+        }
       case undefined:
-      default:
+        this.state = undefined
+        this.command = undefined
+        this.option = undefined
+        this.subcmd = []
         switch (byte) {
           case IAC:
             this.state = COMMAND
@@ -107,9 +138,27 @@ class Telnet extends events {
   const aard = new Telnet(23, 'aardwolf.org')
   aard.on('command', command => console.log(command))
   await aard.print()
+  await aard.write([
+    IAC, DONT, 86,
+    IAC, DONT, 85,
+    IAC, DO, 102,
+    IAC, DO, 200,
+    IAC, DO, 201,
+    IAC, WILL, 102,
+    IAC, WILL, 24,
+    IAC, WILL, 31,
+  ])
+  // await aard.print()
+  await aard.write('viri\n')
   await aard.print()
-  await aard.write([IAC, DO, 86])
+  await aard.write([IAC, DONT, 1])
   await aard.print()
+  await aard.write('nmb344\n')
+  await aard.print()
+  await aard.write('protocols\n')
+  await aard.print()
+  await aard.print()
+  // await aard.print()
   // await aard.write('viri\n')
   // await aard.print()
   // await aard.write('nmb344\n')
