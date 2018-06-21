@@ -112,6 +112,7 @@ class Telnet extends events {
     super()
     this.socket = new net.Socket()
     this.out = new TelnetStream()
+    this.socket.addListener('close', event => this.emit('close', event))
     this.out.addListener('data', event => this.emit('data', event))
     this.out.addListener('command', event => this.emit('command', event))
     this.socket.pipe(this.out)
@@ -122,6 +123,7 @@ class Telnet extends events {
   }
   read() {
     return new Promise(resolve => this.once('data', data => resolve(data)))
+      .catch(() => console.log('Failed read'))
   }
   async print() {
     process.stdout.write(await this.read())
@@ -130,38 +132,35 @@ class Telnet extends events {
     data = data instanceof Array
       ? buffer.from(data)
       : data
-    return new Promise(resolve => this.socket.write(data, resolve))
+    return (new Promise(resolve => this.socket.write(data, resolve)))
+      .catch(() => console.log(`Failed to write: ${data}`))
   }
 }
 
 (async () => {
-  const aard = new Telnet(23, 'aardwolf.org')
-  aard.on('command', command => console.log(command))
-  await aard.print()
+  const aard = new Telnet(23, 'achaea.com')
+  aard.on('close', () => {
+    console.log('\nBye now!')
+    process.exit()
+  })
+  aard.on('command', command => {
+    if (command.option == 201 && command.subcmd) {
+      const subcmdbuf = buffer.from(command.subcmd)
+      console.log('\ngmcp:', subcmdbuf.toString('utf8'))
+    } else {
+      console.log(command)
+    }
+  })
   await aard.write([
-    IAC, DONT, 86,
-    IAC, DONT, 85,
-    IAC, DO, 102,
-    IAC, DO, 200,
+    // IAC, DONT, 86,
+    // IAC, DONT, 85,
+    // IAC, DO, 102,
+    // IAC, DO, 200,
     IAC, DO, 201,
-    IAC, WILL, 102,
-    IAC, WILL, 24,
-    IAC, WILL, 31,
+    // IAC, WILL, 102,
+    // IAC, WILL, 24,
+    // IAC, WILL, 31,
   ])
-  // await aard.print()
-  await aard.write('viri\n')
-  await aard.print()
-  await aard.write([IAC, DONT, 1])
-  await aard.print()
-  await aard.write('nmb344\n')
-  await aard.print()
-  await aard.write('protocols\n')
-  await aard.print()
-  await aard.print()
-  // await aard.print()
-  // await aard.write('viri\n')
-  // await aard.print()
-  // await aard.write('nmb344\n')
-  // await aard.print()
-  aard.destroy()
+  aard.on('data', data => process.stdout.write(data))
+  process.stdin.on('data', data => aard.write(data))
 })()
