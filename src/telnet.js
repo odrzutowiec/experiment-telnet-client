@@ -3,20 +3,20 @@ const net = require('net')
 const stream = require('stream')
 const buffer = require('buffer').Buffer
 
-const COMMAND = Symbol()
-const OPTION = Symbol()
-const SUBNEG = Symbol()
-const SUBCMD = Symbol()
+export const COMMAND = Symbol()
+export const OPTION = Symbol()
+export const SUBNEG = Symbol()
+export const SUBCMD = Symbol()
 
-const SUBEND = 240
-const SUBBEG = 250
-const WILL = 251
-const WONT = 252
-const DO = 253
-const DONT = 254
-const IAC = 255
+export const SUBEND = 240
+export const SUBBEG = 250
+export const WILL = 251
+export const WONT = 252
+export const DO = 253
+export const DONT = 254
+export const IAC = 255
 
-class TelnetStream extends stream.Transform {
+export class TelnetStream extends stream.Transform {
   constructor() {
     super()
     this.setEncoding('utf8')
@@ -107,7 +107,7 @@ class TelnetStream extends stream.Transform {
   }
 }
 
-class Telnet extends events {
+export class Telnet extends events {
   constructor(port, host) {
     super()
     this.socket = new net.Socket()
@@ -137,30 +137,30 @@ class Telnet extends events {
   }
 }
 
-(async () => {
-  const aard = new Telnet(23, 'achaea.com')
-  aard.on('close', () => {
-    console.log('\nBye now!')
-    process.exit()
-  })
-  aard.on('command', command => {
-    if (command.option == 201 && command.subcmd) {
-      const subcmdbuf = buffer.from(command.subcmd)
-      console.log('\ngmcp:', subcmdbuf.toString('utf8'))
-    } else {
-      console.log(command)
-    }
-  })
-  await aard.write([
-    // IAC, DONT, 86,
-    // IAC, DONT, 85,
-    // IAC, DO, 102,
-    // IAC, DO, 200,
-    IAC, DO, 201,
-    // IAC, WILL, 102,
-    // IAC, WILL, 24,
-    // IAC, WILL, 31,
-  ])
-  aard.on('data', data => process.stdout.write(data))
-  process.stdin.on('data', data => aard.write(data))
-})()
+// (async () => {
+//   const aard = new Telnet(23, 'achaea.com')
+//   aard.on('close', () => {
+//     console.log('\nBye now!')
+//     process.exit()
+//   })
+//   aard.on('command', command => {
+//     if (command.option == 201 && command.subcmd) {
+//       const subcmdbuf = buffer.from(command.subcmd)
+//       console.log('\ngmcp:', subcmdbuf.toString('utf8'))
+//     } else {
+//       console.log(command)
+//     }
+//   })
+//   await aard.write([
+//     // IAC, DONT, 86,
+//     // IAC, DONT, 85,
+//     // IAC, DO, 102,
+//     // IAC, DO, 200,
+//     IAC, DO, 201,
+//     // IAC, WILL, 102,
+//     // IAC, WILL, 24,
+//     // IAC, WILL, 31,
+//   ])
+//   aard.on('data', data => process.stdout.write(data))
+//   process.stdin.on('data', data => aard.write(data))
+// })()
