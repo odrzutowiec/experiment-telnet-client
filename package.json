@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "webpack"
+    "webpack": "webpack"
   },
   "repository": {
     "type": "git",
@@ -25,7 +25,6 @@
     "babel-preset-react": "^6.24.1",
     "babel-runtime": "^6.26.0",
     "blessed": "^0.1.81",
-    "nodemon": "^1.17.5",
     "react": "^16.4.1",
     "react-blessed": "^0.2.1",
     "webpack": "^4.12.1",

@@ -4,10 +4,10 @@ module.exports = {
   entry: "./src/index.js",
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: "bundle.js"
+    filename: "index.js"
   },
   target: 'node',
-  mode: 'development',
+  mode: 'production',
   externals: [nodeExternals()],
   module: {
     rules: [
