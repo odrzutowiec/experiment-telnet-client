@@ -125,7 +125,9 @@ class App extends Component {
   }
 }
 
-const aard = new Telnet(23, 'aardwolf.org')
+
+const [host, port] = process.argv.slice(2)
+const aard = new Telnet(port || 23, host)
 
 aard.on('close', () => {
   console.log('\nBye now!')
