@@ -18,6 +18,13 @@ class App extends Component {
           output: [],
         })
       }
+      case 'C-w': {
+        this.setState({
+          pointer: undefined,
+          input: this.state.input.replace(/(\w+|[^a-zA-Z\d\s:])\s*$/, '')
+        })
+        break
+      }
       case 'C-x': {
         this.setState({
           pointer: undefined,
@@ -25,7 +32,7 @@ class App extends Component {
         })
         break
       }
-      case 'up': {
+      case 'C-p': {
         if (this.state.history.length === 0) {
           break
         }
@@ -43,7 +50,7 @@ class App extends Component {
         })
         break
       }
-      case 'down': {
+      case 'C-n': {
         if (this.state.history.length === 0) {
           break
         }
@@ -71,10 +78,14 @@ class App extends Component {
       case 'return': {
         if (this.state.input.length > 0) {
           this.props.telnet.write(`${this.state.input}\n`)
+          const cleaninput = this.state.input.replace(/[^\x20-\x7E]+/g, '');
+          const lastinputsame = this.state.history.slice(-1)[0] === cleaninput
           this.setState(state => ({
             input: '',
             output: [...state.output, `${this.state.input}\n`],
-            history: [...state.history, this.state.input],
+            history: cleaninput.length === 0 || lastinputsame
+              ? this.state.history
+              : [...this.state.history, cleaninput],
             pointer: undefined,
           }))
         }
