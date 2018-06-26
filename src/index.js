@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import blessed from 'blessed';
 import { render } from 'react-blessed';
+import { Buffer } from 'buffer'
 import { IAC, DO, Telnet } from './telnet'
 
 class App extends Component {
@@ -92,16 +93,16 @@ class App extends Component {
     this.setState(state => ({
       output: [...state.output, data],
     }), () => {
-        this.refs.box.setScrollPerc(100)
+      this.refs.box.setScrollPerc(100)
     })
   }
   render() {
     const histlen = this.state.history.length
     const pointer = this.state.pointer !== undefined
       ? `${this.state.pointer+1}/${histlen}) `
-      : null
-    const output = `${this.state.output.join('')}`
-    const input = `${pointer || '>'} ${this.state.input}`
+      : ''
+    const output = this.state.output.join('').replace(/[\r]/g, '');
+    const input = `${pointer}${this.state.input}`
     return (
         <box
           width="100%"
@@ -116,30 +117,24 @@ class App extends Component {
             top={0}
             left="center"
             width="100%"
-            height="100%-1"
-            content={output}
-          />
-          <box
-            bottom={0}
-            width="100%"
-            height={1}
-            content={input}
+            height="100%"
+            content={`${output}${input}`}
           />
         </box>
     );
   }
 }
 
-const aard = new Telnet(23, 'achaea.com')
+const aard = new Telnet(23, 'aardwolf.org')
 
-// aard.on('close', () => {
-//   console.log('\nBye now!')
-//   process.exit()
-// })
+aard.on('close', () => {
+  console.log('\nBye now!')
+  process.exit()
+})
 
 // aard.on('command', command => {
 //   if (command.option == 201 && command.subcmd) {
-//     const subcmdbuf = buffer.from(command.subcmd)
+//     const subcmdbuf = Buffer.from(command.subcmd)
 //     console.log('\ngmcp:', subcmdbuf.toString('utf8'))
 //   } else {
 //     console.log(command)
@@ -158,7 +153,7 @@ const aard = new Telnet(23, 'achaea.com')
 // ])
 
 const screen = blessed.screen({
-  // smartCSR: true,
+  smartCSR: true,
   terminal: 'xterm-256color',
   fullUnicode: true,
 });
