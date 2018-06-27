@@ -92,20 +92,22 @@ class App extends Component {
         break
       }
       default: {
-        this.setState(state => ({
-          input: state.input + char,
-          pointer: undefined,
-        }))
+        if (char) {
+          this.setState(state => ({
+            input: state.input + char,
+            pointer: undefined,
+          }))
+        }
         break
       }
     }
+    this.refs.box.setScrollPerc(100)
   }
   onOutput(data) {
     this.setState(state => ({
       output: [...state.output, data],
-    }), () => {
-      this.refs.box.setScrollPerc(100)
-    })
+    }))
+    this.refs.box.setScrollPerc(100)
   }
   render() {
     const histlen = this.state.history.length
