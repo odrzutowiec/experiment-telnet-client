@@ -7,9 +7,20 @@ import { IAC, DO, Telnet } from './telnet'
 class App extends Component {
   constructor(props) {
     super(props)
-    this.state = { input: '', output: [], history: [], pointer: undefined }
+    this.state = {
+      maxscroll: 0,
+      unseen: 0,
+      scroll: -1,
+      input: '',
+      output: [],
+      history: [],
+      pointer: undefined
+    }
     props.screen.on('keypress', this.onInput.bind(this))
     props.telnet.on('data', this.onOutput.bind(this))
+  }
+  componentDidMount() {
+    this.refs.box.on('scroll', this.onScroll.bind(this))
   }
   onInput(char, key) {
     switch (key.full) {
@@ -103,19 +114,40 @@ class App extends Component {
     }
     this.refs.box.setScrollPerc(100)
   }
+  onScroll() {
+    const max = this.refs.box.getScrollHeight() - 1
+    const curr = this.refs.box.getScroll()
+    const next = curr >= max ? -1 : curr 
+    this.setState({ 
+      maxscroll: max,
+      scroll: next,
+      unseen: next === -1 ? 0 : this.state.unseen,
+    })
+  }
   onOutput(data) {
     this.setState(state => ({
       output: [...state.output, data],
+      unseen: this.state.scroll !== -1 ? state.unseen + 1 : 0,
+      maxscroll: this.refs.box.getScrollHeight() - 1,
     }))
-    this.refs.box.setScrollPerc(100)
+    if (this.state.scroll === -1) {
+      this.refs.box.setScrollPerc(100)
+    }
   }
   render() {
     const histlen = this.state.history.length
     const pointer = this.state.pointer !== undefined
-      ? `${this.state.pointer+1}/${histlen}) `
+      ? `${this.state.pointer+1}/${histlen}: `
       : ''
-    const output = this.state.output.join('').replace(/[\r]/g, '');
+    const output = this.state.output
+      .map(line => line)
+      .join('')
+      .replace(/[\r]/g, '')
+    const lastOutput = this.state.output[this.state.output.length - 1]
     const input = `${pointer}${this.state.input}`
+    const unseen = this.state.unseen
+    const scroll = this.state.scroll
+    const maxscroll = this.state.maxscroll
     return (
         <box
           width="100%"
@@ -133,21 +165,31 @@ class App extends Component {
             height="100%"
             content={`${output}${input}`}
           />
-        </box>
+          {(unseen > 0 || scroll !== -1) && (
+            <box
+              top={0}
+              right={0}
+              height={1}
+              width="100%"
+              style={{ }}
+              content={`[unseen: ${unseen}, scroll: ${scroll}/${maxscroll}]: ${lastOutput}`}
+            />
+          )}
+      </box>
     );
   }
 }
 
 
 const [host, port] = process.argv.slice(2)
-const aard = new Telnet(port || 23, host)
+const client = new Telnet(port || 23, host)
 
-aard.on('close', () => {
+client.on('close', () => {
   console.log('\nBye now!')
   process.exit()
 })
 
-// aard.on('command', command => {
+// client.on('command', command => {
 //   if (command.option == 201 && command.subcmd) {
 //     const subcmdbuf = Buffer.from(command.subcmd)
 //     console.log('\ngmcp:', subcmdbuf.toString('utf8'))
@@ -156,7 +198,7 @@ aard.on('close', () => {
 //   }
 // })
 
-// aard.write([
+// client.write([
 //   // IAC, DONT, 86,
 //   // IAC, DONT, 85,
 //   // IAC, DO, 102,
@@ -177,5 +219,5 @@ screen.key(['C-c'], function(ch, key) {
   process.exit()
 });
 
-render(<App screen={screen} telnet={aard} />, screen);
+render(<App screen={screen} telnet={client} />, screen);
 
